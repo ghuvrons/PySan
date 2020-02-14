@@ -6,7 +6,6 @@ import random
 import json
 import os, select
 from hashlib import sha1
-from Applications import apps as Apps
 from ssl import SSLError
 
 class ClientHandler():

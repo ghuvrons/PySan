@@ -6,8 +6,8 @@ import Websck
 import pprint
 
 class HTTPHandler(HTTPRequestHandler):
-    def __init__(self, client_sock, client_address, isSSL = False, Applications = None):
-        if Applications == None:
+    def __init__(self, client_sock, client_address, isSSL = False, Applications = {}):
+        if Applications == {}:
             raise PySanError("Application module is not set yet.")
         self.Applications = Applications
         self.isSSL = isSSL
@@ -20,7 +20,7 @@ class HTTPHandler(HTTPRequestHandler):
     def servername_callback(self, sock, req_hostname, cb_context, as_callback=True):
         self.hostname = req_hostname
         try:
-            app = self.Applications.apps.get(req_hostname)
+            app = self.Applications.get(req_hostname)
             context = app.ssl_context
             sock.context = context
         except Exception as e:
@@ -59,7 +59,7 @@ class HTTPHandler(HTTPRequestHandler):
     def onClose(self, s):
         pass
     def onEstablished(self):
-        Apps = self.Applications.apps
+        Apps = self.Applications
         self.app = Apps[self.hostname] if Apps.has_key(self.hostname) else Apps["localhost"]
     def middlingWare(self, method, middleware):
         middleware_has_run = []
@@ -95,7 +95,6 @@ class HTTPHandler(HTTPRequestHandler):
             self.send_response_message(500, "\"unknown error\"")
     def do_POST(self):
         try:
-            #self.message = self.rfile.read(int(self.headers['Content-Length']))
             if not self.headers.has_key('Content-Type'):
                 self.message = None
             elif self.headers['Content-Type'] == "application/json":
@@ -162,11 +161,10 @@ class HTTPHandler(HTTPRequestHandler):
         try:
             log = str(self.client_address)
             log += "\n\t{}".format(self.path)
-            #log += "\n\t{}".format(self.message if self.message else '')
             log += "\n\t{}".format(self.hostname)
             self.app.Log.write(log)
-            if os.path.exists(self.app.appPath+'/Public'+self.path):
-                path = (self.app.appPath+'/Public'+self.path).replace('/../', '/')
+            if os.path.exists(self.app.appPath+'/Web'+self.path):
+                path = (self.app.appPath+'/Web'+self.path).replace('/../', '/')
                 if os.path.isdir(path):
                     print("path dir")
                     if path[-1]=='/':
@@ -225,7 +223,7 @@ class HTTPHandler(HTTPRequestHandler):
         }
         '''
         if not self.app:
-            Apps = self.Applications.apps
+            Apps = self.Applications
             self.app = Apps[self.hostname] if Apps.has_key(self.hostname) else Apps["localhost"]
         log = str(self.client_address)
         log += "\n\t{}".format(self.hostname)

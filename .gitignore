@@ -1,3 +1,10 @@
 /build
 /dist
 /PySan_Janoko.egg-info
+/*.pyc
+/*/*.pyc
+/*/*/*.pyc
+/*/*/*/*.pyc
+/*/*/*/*/*.pyc
+/*/*/*/*/*/*.pyc
+/*/*/*/*/*/*/*.pyc
