@@ -1,0 +1,28 @@
+class Query:
+	def __init__(self, options):
+		self.table = options["from"]
+		if options.has_key("where"):
+			condition = options["where"]
+			print type(condition) is tuple, len(condition)
+			if type(condition) is tuple and len(condition) > 0:
+				print condition[0]
+			elif type(condition) is str:
+				condition = (condition,)
+			self.condition = condition
+		else: self.condition = "TRUE"
+		
+	def printQ(self):
+		print self.condition
+		
+	@staticmethod
+	def _and(*arg):
+		return Query._and, type(arg)
+q = Query({
+	"from":"name_table",
+	"where":Query._and(
+		"hey"
+	),
+	"where": "hay",
+	"where": ("hay")
+})
+q.printQ()
