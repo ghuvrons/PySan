@@ -3,7 +3,7 @@ from PySan.Base.Session import SessionHandler
 from PySan.Base.Route import BaseRoute
 
 class App:
-    def __init__(self, app_module):
+    def __init__(self, app_module, config = {}):
         self.app_module = app_module
         self.appPath = app_module.__path__[0]
         self.Log = Log()
@@ -17,7 +17,7 @@ class App:
                 "upload": 10000000, #10MB
             }
         }
-        self.default_config.update(self.config)
+        self.default_config.update(config)
         self.config = self.default_config
         self.Session = SessionHandler(self.config["Session-path"])
         self.Session.start()

@@ -9,4 +9,4 @@ databases["vpn_radius"] = MySQL.db({
     })
 
 def close():
-    myclient.close()
+    pass

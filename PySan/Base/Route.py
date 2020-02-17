@@ -2,7 +2,7 @@ import re, pprint
 
 class Route:
     def group(self,path,middleware=[], group=[]):
-        return {'path': path, 'middleware':middleware, 'sub': [ x for x in group]}
+        return {'path': path, 'middleware': middleware, 'sub': [ x for x in group]}
     def route(self,path,controller,method=['get', 'post'],middleware=[], respond=None):
         return {'path': path, 'controller': controller, 'methods': method, 'middleware':middleware, "respond":respond}
 
@@ -116,7 +116,9 @@ class BaseRoute:
         self.router = Router()
         self.isWsRoute = isWsRoute
         self.Controller = app_module.Controller
+        self.controllerCache = {}
         self.Middleware = app_module.Middleware
+        self.middlewareCache = {}
         self.Database = app_module.Database
         self.Module = app_module.Module if 'Module' in dir(app_module) else None
         self.Service = app_module.Service
@@ -149,12 +151,12 @@ class BaseRoute:
         if type(controller) == str:
             controller = controller.split('@', 1)
             controller_class_name = controller[0].split('/')
-            if not self.Controller._controller.has_key(controller[0]):
+            if not self.controllerCache.has_key(controller[0]):
                 controller_class = self.Controller
                 for c_class_name in controller_class_name:
                     controller_class = getattr(controller_class, c_class_name)
-                self.Controller._controller[controller[0]] = controller_class(self.Database, self.Service, self.Module, self.appPath)
-            return getattr(self.Controller._controller[controller[0]], controller[1])
+                self.controllerCache[controller[0]] = controller_class(self.Database, self.Service, self.Module, self.appPath)
+            return getattr(self.controllerCache[controller[0]], controller[1])
         elif callable(controller):
             return controller
         return None
@@ -163,12 +165,12 @@ class BaseRoute:
         if type(middleware) == str:
             middleware = middleware.split('@', 1)
             middleware_class_name = middleware[0].split('/')
-            if not self.Middleware._middleware.has_key(middleware[0]):
+            if not self.middlewareCache.has_key(middleware[0]):
                 middleware_class = self.Middleware
                 for mw_class_name in middleware_class_name:
                     middleware_class = getattr(middleware_class, mw_class_name)
-                self.Middleware._middleware[middleware[0]] = middleware_class()
-            return getattr(self.Middleware._middleware[middleware[0]], middleware[1])
+                self.middlewareCache[middleware[0]] = middleware_class()
+            return getattr(self.middlewareCache[middleware[0]], middleware[1])
         elif callable(middleware):
             return middleware
         return None
