@@ -1,9 +1,8 @@
 from HTTPRequestHandler import HTTPRequestHandler
 from ErrorHandler import *
 import traceback
-import os, ssl, json, cgi, pprint
+import os, ssl, json, cgi
 import Websck
-import pprint
 
 class HTTPHandler(HTTPRequestHandler):
     def __init__(self, client_sock, client_address, isSSL = False, Applications = {}):

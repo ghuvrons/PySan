@@ -10,5 +10,3 @@ modules = {}
 for k in modules.keys():
     modules[k].Databases = Database.databases
     modules[k].Services = Service.services
-def close():
-    pass

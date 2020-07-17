@@ -1,0 +1,5 @@
+{
+  "student": "Student.Student",
+  "book": "Student.Book",
+  "ability": "Student.Ability"
+}

@@ -6,16 +6,20 @@ from Query import Query
 
 class db:
     Q = Query
-    def __init__(self, option):
-        self.option = {
+    def __init__(self, option, dbs_read = []):
+        default_db = {
             "host": "localhost",
             "port": 3306,
             "user": "root",
             "password": "",
-            "database": "tes",
-            "maxConnection" : 5
+            "database": "pysan"
         }
+        self.option = default_db.copy()
+        self.option.update({
+            "transaction_only" : False
+        })
         self.option.update(option)
+        self.transactionConnection = None  # insert update delete
         self.availableConnection = []
         self.allConnection = []
         self.queue = []
@@ -23,8 +27,11 @@ class db:
         self.availableConnection.append(conn)
         self.shiftQueue()
     def onExpiredConnection(self, conn):
-        self.allConnection.remove(conn)
-        self.availableConnection.remove(conn)
+        try:
+            self.allConnection.remove(conn)
+            self.availableConnection.remove(conn)
+        except:
+            pass
     def shiftQueue(self, conn = None):
         if not conn:
             conn = self.availableConnection.pop()
@@ -33,7 +40,6 @@ class db:
             conn.execute(query)
         except IndexError:
             self.availableConnection.append(conn)
-            pass
     def execute(self, query):
         def onError(e):
             raise e
@@ -43,7 +49,7 @@ class db:
         try:
             self.shiftQueue()
         except IndexError:
-            if len(self.allConnection) < self.option["maxConnection"]:
+            if len(self.allConnection) < 1:
                 newConnection = Connection(
                     self.option["host"],
                     self.option["user"],

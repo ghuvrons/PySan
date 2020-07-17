@@ -2,7 +2,8 @@ from __future__ import print_function
 from PySan.SocketSVR import SocketSVR
 from PySan.SocketFileSVR import SocketFileSVR
 from PySan.ClientHandler import HTTPHandler
-import traceback, sys, os, threading
+from PySan.Base.App import App as BaseApp
+import traceback, sys, os, threading, json
 
 # This must be the first statement before other statements.
 # You may only put a quoted or triple quoted string, 
@@ -62,21 +63,12 @@ class socketHandle(SocketSVR):
                 pass
         HTTPH.onClose = onClose
 
-# appList = [
-#     'localhost'
-# ]
-# __import__(__name__, fromlist=appList)
-# apps = {}
-# for app in appList:
-#     app_mod = getattr(sys.modules[__name__], app)
-#     apps[app] = getattr(app_mod, 'App')
-
 class PySan:
     def __init__(self):
         self.applications = {}
         self.clients = []
         self.server = None
-        self.host = "127.0.0.1"
+        self.host = "0.0.0.0"
         self.port = 8000
         self.sslPort = 8001
         main_module = sys.modules["__main__"]
@@ -92,7 +84,7 @@ class PySan:
     def cmd(self, sock, cmd, app):
         try:
             if app and not cmd == 'start' and not self.applications.has_key(app):
-                print("no app ", app)
+                sock.send("Not found module "+app)
                 sock.shutdown(1)
                 sock.close()
             if cmd == 'stream' and app:
@@ -124,7 +116,7 @@ class PySan:
     def addVHost(self, domain):
         __import__(domain)
         app_mod = sys.modules[domain]
-        self.applications[domain] = getattr(app_mod, 'App')
+        self.applications[domain] = BaseApp(app_mod, app_mod.config)
     def closeHost(self, domain):
         try:
             self.applications[domain].close()

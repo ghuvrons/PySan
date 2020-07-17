@@ -54,12 +54,12 @@ class SocketFileSVR:
                     break
         self.wpipe.close()
         self.rpipe.close()
-    def close(self):
-        self.wpipe.write("g")
-        self.wpipe.flush()
-        self.server_socket.close()
         try:
             os.remove(self.file_path)
         except OSError:
             pass   
+    def close(self):
+        self.wpipe.write("g")
+        self.wpipe.flush()
+        self.server_socket.close()
         self.isClosed = True

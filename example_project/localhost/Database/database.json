@@ -1,0 +1,20 @@
+{
+  "db1": {
+    "driver": "PySan.Database.MySQL",
+    "config" : {
+      "host": "localhost",
+      "user": "pysan",
+      "password": "ppmttphq",
+      "database": "pysan_example",
+      "transaction_only": true
+    },
+    "dbs_read": [
+      {
+        "host": "localhost",
+        "user": "pysan",
+        "password": "ppmttphq",
+        "database": "pysan_example"
+      }
+    ]
+  }
+}

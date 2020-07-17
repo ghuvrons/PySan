@@ -1,7 +1,8 @@
 class Controller:
-    def __init__(self, Database, Service, Module, appPath = None):
-        self.Databases = Database.databases if Database else None
-        self.Services = Service.services if Service else None
-        self.Modules = Module.modules if Module else None
+    def __init__(self, Databases, Services, Models, Modules, appPath = None):
+        self.Databases = Databases
+        self.Models = Models
+        self.Modules = Modules
+        self.Services = Services
         self.appPath = appPath
         

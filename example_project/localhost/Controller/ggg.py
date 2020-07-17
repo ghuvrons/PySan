@@ -1,20 +1,23 @@
 from PySan.Base.Controller import Controller
-import gzip
-from StringIO import StringIO
+from PySan.Database.MySQL import Query 
+import datetime
 class ggg(Controller):
-    def readFile(self, requestHeandler, session):
-        result = ''
-        basepath = requestHeandler.app.appPath+'/Public'
-        f = open(basepath+'/tes.html', 'rb')
-        #result = gzip.zlib.compress(result)
-        #print gzip.zlib.decompress(result)
-        return f
-    def writeFile(self, requestHeandler, session):
-        f = requestHeandler.message['file_input']
-        _id = requestHeandler.message.getvalue('id')
-        return 0
-    def tesMysql(self, requestHeandler):
-        self.Databases["vpn_radius"].execute(
-            "SELECT * from userrs"
-        )
-        return 0
+    def index(self, requestHeandler):
+        # Create new model
+        # new_student = self.Models['student'].create(name="ghuvrons", nip = 32)
+        # new_student.save()
+        # print new_student.nip
+
+        students = self.Models['student'].search(nip=123)
+        for s in students:
+            print "-"
+            print s.name
+            s.name = "kikio"
+            s.save()
+            for book in s.books:
+                print book.name
+
+        student = self.Models['student'].one(nip=123)
+        student.ability['speed'].value = "lololo"
+        print student.ability.save()
+        return "s1.name"

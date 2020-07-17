@@ -1,4 +1,6 @@
 from threading import Event
+import datetime
+
 class QueryResult:
     def __init__(self, result, query):
         self.result = result
@@ -19,6 +21,7 @@ class Query:
         self.error = None
         self.db = db
         self.isSelectQuery = False
+        self.asDictionary = False
 
         self.group_by = None
         self.having = None
@@ -32,7 +35,7 @@ class Query:
     def _where(self, condition = None):
         if condition:
             where_condition = condition
-            if type(where_condition) is tuple and len(where_condition) > 0:
+            if type(where_condition) in [tuple, list]:
                 if not where_condition[0] in [Query._and, Query._or, Query._not]:
                     where_condition = Query._and(*where_condition)
             else:
@@ -99,8 +102,10 @@ class Query:
       having = None,
       order_by = None,
       limit = None,
-      offset = None
+      offset = None,
+      asDictionary = False
     ):
+        self.asDictionary = asDictionary
         self.isSelectQuery = True
         where_condition = self._where(where)
         
@@ -190,6 +195,15 @@ class Query:
             return 'TRUE' if val else 'FALSE'
         elif type(val) is type(None):
             return 'NULL'
+        elif type(val) is datetime.date:
+            return val.isoformat()
+        elif type(val) is datetime.timedelta:
+            return Query._secondsFormat(val.total_seconds())
+        elif type(val) is datetime.time:
+            val = datetime.datetime.combine(datetime.date.min, val) - datetime.datetime.min
+            return Query._secondsFormat(val.total_seconds())
+        elif type(val) is datetime.datetime:
+            return val.isoformat()
         return 'TRUE'
 
     @staticmethod
@@ -207,6 +221,18 @@ class Query:
     @staticmethod
     def _not(*arg):
         return Query._not, "NOT ("+Query._operation(True, *arg)[1]+")"
+
+    @staticmethod
+    def _secondsFormat(total_seconds):
+        h=0
+        m=0
+        s=0
+        h = int(total_seconds / 3600)
+        total_seconds -= h * 3600
+        m = int(total_seconds / 60)
+        total_seconds -= m * 60
+        s = int(total_seconds)
+        return "{:d}:{:02d}:{:02d}".format(h,m,s)
 
     @staticmethod
     def _operation(isAnd, *arg):

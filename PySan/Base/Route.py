@@ -1,10 +1,48 @@
-import re, pprint
+
+import re, pprint, json
 
 class Route:
-    def group(self,path,middleware=[], group=[]):
-        return {'path': path, 'middleware': middleware, 'sub': [ x for x in group]}
-    def route(self,path,controller,method=['get', 'post'],middleware=[], respond=None):
-        return {'path': path, 'controller': controller, 'methods': method, 'middleware':middleware, "respond":respond}
+    def group(self, *arg, **args):
+        key = ('path', 'middleware', 'group', )
+        obj = {'path':'/', 'middleware':[], 'group':[]}
+        obj.update(args)
+        i = 0
+        for val in arg:
+            if i > len(key): break
+            obj[key[i]] = val
+            i+=1
+        return {
+            'path': str(obj['path']), 
+            'middleware': obj['middleware'], 
+            'sub': [x for x in obj['group']]
+        }
+    #respond for ws
+    def route(self, *arg, **args):
+        key = ('path', 'controller', 'method', 'middleware', 'respond', )
+        obj = {'path':'/', 'controller':None, 'method':['get', 'post'], 'middleware':[], 'respond':None}
+        obj.update(args)
+        i = 0
+        for val in arg:
+            if i > len(key): break
+            obj[key[i]] = val
+            i+=1
+        return {
+            'path': str(obj['path']), 
+            'controller': str(obj['controller']), 
+            'methods': obj['method'], 
+            'middleware': obj['middleware'], 
+            "respond": str(obj['respond'])
+        }
+    def jsonToRoute(self, objs):
+        result = []
+        for obj in objs:
+            print obj
+            if obj.has_key('group'):
+                obj['group'] = self.jsonToRoute(obj['group'])
+                result.append(self.group(**obj))
+            else:
+                result.append(self.route(**obj))
+        return result
 
 class Router:
     def __init__(self):
@@ -112,19 +150,22 @@ class Router:
         return self
 
 class BaseRoute:
-    def __init__(self, app_module, route_config, isWsRoute = False):
+    def __init__(self, app_module, isWsRoute = False):
         self.router = Router()
         self.isWsRoute = isWsRoute
         self.Controller = app_module.Controller
         self.controllerCache = {}
         self.Middleware = app_module.Middleware
         self.middlewareCache = {}
-        self.Database = app_module.Database
-        self.Module = app_module.Module if 'Module' in dir(app_module) else None
-        self.Service = app_module.Service
+        self.Databases = {}
+        self.Models = {}
+        self.Modules = {}
+        self.Services = {}
         self.appPath = app_module.__path__[0]
+
+    def generateRoute(self, route_config):
         self.group(route_config)
-        
+        pprint.pprint(route_config)
     def group(self, route_config, parent_path = '/', conf_middleware=[]):
         for conf in route_config:
             if conf.has_key("controller"):
@@ -155,7 +196,7 @@ class BaseRoute:
                 controller_class = self.Controller
                 for c_class_name in controller_class_name:
                     controller_class = getattr(controller_class, c_class_name)
-                self.controllerCache[controller[0]] = controller_class(self.Database, self.Service, self.Module, self.appPath)
+                self.controllerCache[controller[0]] = controller_class(self.Databases, self.Services, self.Models, self.Modules, self.appPath)
             return getattr(self.controllerCache[controller[0]], controller[1])
         elif callable(controller):
             return controller

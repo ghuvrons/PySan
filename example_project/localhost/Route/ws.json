@@ -1,0 +1,10 @@
+[
+    {
+        "url":"/",
+        "middleware" : "Auth",
+        "group":[
+            {"url": "register", "controller" : "Account/Auth/Auth@_reg"},
+            {"url": "is_login" , "controller" : "Account/Auth/Auth@isLogin"}
+        ]
+    }
+]
