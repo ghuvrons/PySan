@@ -3,7 +3,7 @@ import threading
 import time
 import random
 import socket # For gethostbyaddr() hm
-import json
+import json, decimal
 import mimetypes
 from warnings import filterwarnings, catch_warnings
 from ssl import SSLError
@@ -13,6 +13,13 @@ with catch_warnings():
                         DeprecationWarning)
     import mimetools
     
+def encode_complex(obj): 
+    if isinstance(obj, complex): 
+        return [obj.real, obj.imag] 
+    elif isinstance(obj, decimal.Decimal):
+        return float(obj)
+    raise TypeError(repr(obj) + " is not JSON serializable.") 
+
 class HTTPRequestHandler(threading.Thread):
     sys_version = "Citrapay"
 
@@ -222,7 +229,7 @@ class HTTPRequestHandler(threading.Thread):
                 else:
                     self.send_header("Content-Type", 'application/octet-stream')
         elif self.respone_headers.get('Content-Type') == "application/json":
-            msg = json.dumps(msg)
+            msg = json.dumps(msg, default=encode_complex)
             self.send_header("Content-Length", len(msg))
         elif type(msg) == str:
             self.send_header("Content-Length", len(msg))
