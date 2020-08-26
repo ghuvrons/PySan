@@ -66,7 +66,7 @@ class HTTPHandler(HTTPRequestHandler):
         if self.session and (cookies.has_key("PySessID") and self.session.id != cookies["PySessID"]):
             self.session = None
         for mw in middleware:
-            if mw in middleware_has_run:
+            if not mw and mw in middleware_has_run:
                 continue
             middleware_has_run.append(mw)
             if mw.func_code.co_argcount == 3:

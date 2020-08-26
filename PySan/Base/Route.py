@@ -36,7 +36,6 @@ class Route:
     def jsonToRoute(self, objs):
         result = []
         for obj in objs:
-            print obj
             if obj.has_key('group'):
                 obj['group'] = self.jsonToRoute(obj['group'])
                 result.append(self.group(**obj))
@@ -66,7 +65,6 @@ class Router:
                     url.remove('')
                 except:
                     break
-                    
         if len(url) == 0:
             if self.methods.has_key(method):
                 if isGetRespond:
@@ -203,7 +201,7 @@ class BaseRoute:
         return None
     
     def middlewareToCallable(self, middleware):
-        if type(middleware) == str:
+        if type(middleware) in [str, unicode]:
             middleware = middleware.split('@', 1)
             middleware_class_name = middleware[0].split('/')
             if not self.middlewareCache.has_key(middleware[0]):
