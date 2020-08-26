@@ -1,0 +1,10 @@
+[
+    {
+        "path":"/",
+        "middleware" : ["header/contentType/appJSON@run"],
+        "group":[
+            {"path": "/", "controller" : "site/site@index"},
+            {"path": "/tes" , "controller" : "ggg/ggg@index"}
+        ]
+    }
+]
