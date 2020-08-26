@@ -58,10 +58,9 @@ class Model(object):
     @classmethod
     def createFromDict(this_class, args, is_new = True):
         model = this_class()
-        attrs = model.__attributtes.keys()
         for key in args.keys():
-            if key in attrs:
-                setattr(model, str(key), args[key])
+            # if key in attrs:
+            setattr(model, str(key), args[key])
         if not is_new:
             model.__updated__attr = {}
             if model._primary_key in args.keys():

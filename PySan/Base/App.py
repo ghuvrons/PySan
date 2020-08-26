@@ -57,7 +57,6 @@ class App:
             controller_json = open(sys.modules[app_mod_name+".Controller"].__path__[0]+"/controller.json")
             controller_list = json.load(controller_json)
             controller_json.close()
-
             __import__(app_mod_name+".Controller", fromlist=[str(s) for s in controller_list], globals=globals())
         except Exception as e:
             pass
