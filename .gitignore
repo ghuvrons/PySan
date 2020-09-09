@@ -1,10 +1,7 @@
 /build
 /dist
 /PySan_Janoko.egg-info
-/*.pyc
-/*/*.pyc
-/*/*/*.pyc
-/*/*/*/*.pyc
-/*/*/*/*/*.pyc
-/*/*/*/*/*/*.pyc
-/*/*/*/*/*/*/*.pyc
+*.pyc
+example_project/menara.sandhika.com/
+example_project_else
+.vscode

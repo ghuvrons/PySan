@@ -86,7 +86,7 @@ class HTTPHandler(HTTPRequestHandler):
                 self.ws.onMessage = self.__ws_do__
                 self.session = self.app.Session.create(self)
                 self.ws.handle()
-                return;
+                return
             self.message = None
             self._do_('get')
         except Exception, e:
@@ -191,7 +191,7 @@ class HTTPHandler(HTTPRequestHandler):
             if not controller:
                 raise HTTPError(404, 'not found')
             self.middlingWare(method, middleware)
-            response_message = "";
+            response_message = ""
             if controller.func_code.co_argcount == 3:
                 self.session = self.session if self.session else self.app.Session.create(self)
                 response_message = controller(self, self.session)
@@ -239,7 +239,7 @@ class HTTPHandler(HTTPRequestHandler):
                 raise WSError(404)
             self.message = msg["data"]
             self.middlingWare('ws', middleware)
-            response_message = "";
+            response_message = ""
             if controller.func_code.co_argcount == 3:
                 self.session = self.session if self.session else self.app.Session.create(self)
                 response_message = controller(self, self.session)
