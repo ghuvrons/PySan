@@ -48,22 +48,22 @@ class SocketSVR:
         if self.ssl_server_socket != None:
             os_input.append(self.ssl_server_socket)
         while not self.isClosed:
-            readable, writable, exceptional = select.select(os_input, [], os_input)
+            readable = select.select(os_input, [], os_input)[0]
             for r in readable:
                 if r == self.server_socket:
                     try:
                         sock, addr = self.server_socket.accept()
-                    except socket.timeout, e:
+                    except socket.timeout:
                         continue
-                    except Exception, e:
+                    except Exception:
                         continue
                     self.onNewClient(sock, addr)
                 elif r == self.ssl_server_socket:
                     try:
                         sock, addr = self.ssl_server_socket.accept()
-                    except socket.timeout, e:
+                    except socket.timeout:
                         continue
-                    except Exception, e:
+                    except Exception:
                         continue
                     self.onNewSSLClient(sock, addr)
                 else:

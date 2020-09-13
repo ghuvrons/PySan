@@ -36,7 +36,7 @@ class Route:
     def jsonToRoute(self, objs):
         result = []
         for obj in objs:
-            if obj.has_key('group'):
+            if 'group' in obj:
                 obj['group'] = self.jsonToRoute(obj['group'])
                 result.append(self.group(**obj))
             else:
@@ -66,14 +66,14 @@ class Router:
                 except:
                     break
         if len(url) == 0:
-            if self.methods.has_key(method):
+            if method in self.methods:
                 if isGetRespond:
                     return self.methods[method]['middleware'], self.methods[method]['controller'], {}, self.methods[method]['respond'];
                 else:
                     return self.methods[method]['middleware'], self.methods[method]['controller'], {};
             else: return ([], None, {}, None) if isGetRespond else ([], None, {})
         current_url = url.pop(0)
-        if self.sub.has_key(current_url):
+        if current_url in self.sub:
             result = self.sub[current_url].search(url, method, isGetRespond=isGetRespond)
             if result[1]: #found
                 return result
@@ -96,7 +96,7 @@ class Router:
         if len(path) == 0:
             for method in methods:
                 method = method.lower()
-                if not self.methods.has_key(method):
+                if not method in self.methods:
                     self.methods[method] = {'controller': controller, 'middleware': [], 'respond': respond}
                 for mw in self.methods[method]['middleware']:
                     if mw in middleware:
@@ -142,7 +142,7 @@ class Router:
                 self.sub_regrex.append(tmp)
                 tmp[2].createRoute(path, methods, controller, middleware, respond)
             else:
-                if not self.sub.has_key(current_path):
+                if not current_path in self.sub:
                     self.sub[current_path] = Router()
                 self.sub[current_path].createRoute(path, methods, controller, middleware, respond)
         return self
@@ -166,7 +166,7 @@ class BaseRoute:
         pprint.pprint(route_config)
     def group(self, route_config, parent_path = '/', conf_middleware=[]):
         for conf in route_config:
-            if conf.has_key("controller"):
+            if "controller" in conf:
                 path_arr = (parent_path+'/'+conf['path']).split('/')
                 while True:
                     try:
@@ -180,17 +180,17 @@ class BaseRoute:
                     if mw not in middleware:
                         middleware.append(mw)
                 self.router.createRoute(path_arr, conf['methods'], controller, middleware, conf['respond'])
-            elif conf.has_key("sub"):
+            elif "sub" in conf:
                 self.group(
                     conf['sub'], 
                     (parent_path+'/'+conf['path']), 
-                    conf_middleware+(conf['middleware'] if conf.has_key('middleware') else [])
+                    conf_middleware+(conf['middleware'] if 'middleware' in conf else [])
                 )
     def controllerToCallable(self, controller):
         if type(controller) == str:
             controller = controller.split('@', 1)
             controller_class_name = controller[0].split('/')
-            if not self.controllerCache.has_key(controller[0]):
+            if not controller[0] in self.controllerCache:
                 controller_class = self.Controller
                 for c_class_name in controller_class_name:
                     controller_class = getattr(controller_class, c_class_name)
@@ -201,10 +201,10 @@ class BaseRoute:
         return None
     
     def middlewareToCallable(self, middleware):
-        if type(middleware) in [str, unicode]:
+        if type(middleware) is str:
             middleware = middleware.split('@', 1)
             middleware_class_name = middleware[0].split('/')
-            if not self.middlewareCache.has_key(middleware[0]):
+            if not middleware[0] in self.middlewareCache:
                 middleware_class = self.Middleware
                 for mw_class_name in middleware_class_name:
                     middleware_class = getattr(middleware_class, mw_class_name)

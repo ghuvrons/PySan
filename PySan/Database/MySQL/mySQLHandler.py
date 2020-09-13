@@ -58,8 +58,6 @@ class mySQLHandler:
 			col += '`'+key+'`'
 			if type(data[key]) is str:
 				val += "'"+data[key].replace('\'', '\'\'')+"'"
-			elif type(data[key]) is unicode:
-				val += "'"+data[key].replace('\'', '\'\'')+"'"
 			elif type(data[key]) is type(self.now):
 				val += data[key]()
 			elif data[key] == None:
@@ -76,7 +74,7 @@ class mySQLHandler:
 			return True
 		except:
 			if self.isLog:
-				print sql
+				print(sql)
 			db.rollback()
 			return False
 		finally:
@@ -93,8 +91,6 @@ class mySQLHandler:
 			str_data += '`'+key+'`'+" = "
 			if type(data[key]) is str:
 				str_data += "'"+data[key].replace('\'', '\'\'')+"'"
-			elif type(data[key]) is unicode:
-				str_data += "'"+data[key].replace('\'', '\'\'')+"'"
 			elif type(data[key]) is type(self.now):
 				val += data[key]()
 			elif data[key] == None:
@@ -110,7 +106,7 @@ class mySQLHandler:
 			return True
 		except:
 			if self.isLog:
-				print sql
+				print(sql)
 			db.rollback()
 			return False
 		finally:
@@ -125,7 +121,7 @@ class mySQLHandler:
 			return True
 		except:
 			if self.isLog:
-				print sql
+				print(sql)
 			db.rollback()
 			return False
 		finally:
@@ -143,7 +139,7 @@ class mySQLHandler:
 				flag = True
 			column += col
 		sql = "SELECT "+column+" FROM "+table+" WHERE "+_where
-		#print sql
+		#print(sql)
 		try:
 			db = self.newConnection()
 			cursor = self.execute(db, sql)
@@ -151,8 +147,8 @@ class mySQLHandler:
 			return results
 		except:
 			if self.isLog:
-				print db
-				print sql
+				print(db)
+				print(sql)
 			return False
 		finally:
 		    db.close()

@@ -5,6 +5,7 @@ import time
 import random
 import json
 import os, select
+import traceback
 from hashlib import sha1
 from ssl import SSLError
 
@@ -14,12 +15,13 @@ class ClientHandler():
         self.addr = HTTPReqHandler.client_address
         self.hostname = None
         self.protocol = ''
-        self.message = ['']
+        self.message = [b'']
         self.closed = False
         self.session_id = None
         self.session = None
     #handsacking return protocol
     def handsacking(self):
+        print("handshaking")
         origin = self.HTTPReqHandler.headers.get("Origin")
         try:
             if origin in self.HTTPReqHandler.app.config["Access-Control-Allow"]["Origins"]:
@@ -52,9 +54,11 @@ class ClientHandler():
 
     def hashKey(self, key):
         guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-        combined = key + guid
+        combined = (key + guid).encode('UTF-8')
         hashed = sha1(combined).digest()
-        result = base64.b64encode(hashed)
+        result = base64.b64encode(hashed).decode('UTF-8')
+        print(combined)
+        print(result)
         return result
     
     def decodeMessage(self, data):
@@ -63,12 +67,12 @@ class ClientHandler():
             data = self.message[0]
             lid = len(data)
             
-            if ord(data[0]) == 136:
-                self.close()
+            if data[0] == 136:
+                self.HTTPReqHandler.close()
                 return
             if lid < 6: # 1 + 1 + 4 (? + l_data + mask)
                 return
-            datalength = ord(data[1]) & 127
+            datalength = data[1] & 127
             mask_index = 2
 
             if datalength == 126:
@@ -89,23 +93,23 @@ class ClientHandler():
             return
         
         # Extract masks
-        masks = [ord(m) for m in self.message[1]]
-        msg = ''
+        masks = self.message[1]
+        msg = b''
         j = 0
         # Loop through each byte that was received
         for i in range(self.message[0]):
             # Unmask this byte and add to the decoded buffer
-            msg += chr(ord(self.message[2][i]) ^ masks[j])
+            msg += bytes([self.message[2][i] ^ masks[j]])
             j += 1
             if j == 4:
                 j = 0
                 
-        self.onMessage(msg)
-        if self.message[2][self.message[0]:] == '':
-            self.message = ['']
+        self.onMessage(msg.decode('UTF8'))
+        if self.message[2][self.message[0]:] == b'':
+            self.message = [b'']
         else:
             data = self.message[2][self.message[0]:]
-            self.message = ['']
+            self.message = [b'']
             self.decodeMessage(data)
 
     def sendMessage(self, s, binary = False):
@@ -113,7 +117,7 @@ class ClientHandler():
         Encode and send a WebSocket message
         """
         # Empty message to start with
-        message = ""
+        message = b''
         # always send an entire message as one frame (fin)
         # default text
         b1 = 0x81
@@ -122,13 +126,10 @@ class ClientHandler():
             b1 = 0x02
         
         # in Python 2, strs are bytes and unicodes are strings
-        if type(s) == unicode:
-            payload = s.encode("UTF8")
+        payload = s.encode("UTF8")
 
-        elif type(s) == str:
-            payload = s
         # Append 'FIN' flag to the message
-        message += chr(b1)
+        message += bytes([b1])
         # never mask frames from the server to the client
         b2 = 0
 
@@ -136,24 +137,24 @@ class ClientHandler():
         length = len(payload)
         if length < 126:
             b2 |= length
-            message += chr(b2)
+            message += bytes([b2])
 
         elif length < (2 ** 16):
             b2 |= 126
-            message += chr(b2)
+            message += bytes([b2])
             l = struct.pack(">H", length)
             message += l
 
         else:
             l = struct.pack(">Q", length)
             b2 |= 127
-            message += chr(b2)
+            message += bytes([b2])
             message += l
         # Append payload to message
         message += payload
 
         # Send to the client
-        self.HTTPReqHandler.connection.send(str(message))
+        self.HTTPReqHandler.connection.send(message)
 
     def sendRespond(self, respMessage, code = 200, respData = None):
         resp = {
@@ -169,9 +170,6 @@ class ClientHandler():
 
     def onMessage(self, msg):
         print('MSG > ' + msg)
-    def close(self):
-        self.HTTPReqHandler.connection.shutdown(1)
-        self.HTTPReqHandler.close_connection = 1
     def handle(self):
         if self.handsacking():
             self.onNew()
@@ -180,23 +178,21 @@ class ClientHandler():
                 try:
                     data = self.HTTPReqHandler.connection.recv(2048)
                     if not data:
-                        print("ws sock > no data")
-                        self.HTTPReqHandler.connection.shutdown(1)
-                        self.HTTPReqHandler.close_connection = 1
+                        self.HTTPReqHandler.close()
                         break
                     self.decodeMessage(data)
                     self.HTTPReqHandler.wfile.flush()
-                except socket.timeout, e:
+                except socket.timeout as e:
                     print("ws sock>", e)
-                    self.HTTPReqHandler.connection.shutdown(1)
-                    self.HTTPReqHandler.close_connection = 1
+                    self.HTTPReqHandler.close()
                     break
-                except SSLError, e:
+                except SSLError as e:
                     print("ws sock e ssl >", e)
-                    self.HTTPReqHandler.connection.shutdown(1)
-                    self.HTTPReqHandler.close_connection = 1
+                    self.HTTPReqHandler.close()
                     break
-                except Exception, e:
+                except Exception as e:
+                    g = traceback.format_exc()
+                    print(g)
                     print("ws sock some error>", e)
                     self.HTTPReqHandler.close_connection = 1
                     break

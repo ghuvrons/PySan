@@ -16,7 +16,6 @@ class Log:
         if len(self.tmp) > 100:
             self.tmp.pop(0)
     def addStreamer(self, sock):
-        print self
         for tmp in self.tmp:
             date, log = tmp
             sock.send(date.strftime("%c")+'\n'+str(log))

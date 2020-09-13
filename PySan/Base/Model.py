@@ -24,12 +24,12 @@ class ModelsAsObject(object):
         for m in models:
             self.__attributtes[getattr(m, key)] = m
     def __getitem__(self, name):
-        if not self.__attributtes.has_key(name):
+        if not name in self.__attributtes:
             args = {self.__key: name}
             for key in self.__on.keys():
                 if self.__parent is not None:
                     args[self.__on[key]] = getattr(self.__parent, key)
-            print args
+            print(args)
             self.__attributtes[name] = self.__obj_class.create(**args)
         return self.__attributtes[name]
     def save(self):
@@ -112,8 +112,8 @@ class Model(object):
 
     def __setattr__(self, name, value):
         if (hasattr(self, "_Model__attributtes") 
-         and self.__attributtes.has_key(name) 
-         and self.__attributtes[name].has_key("datatype")
+         and name in self.__attributtes 
+         and "datatype" in self.__attributtes[name]
         ):
             datatype = self.__attributtes[name]["datatype"]
             new_value = None
@@ -125,10 +125,8 @@ class Model(object):
                 new_value = float(value)
             elif datatype == 'str':
                 new_value = str(value)
-            elif datatype == 'unicode':
-                new_value = unicode(value)
             elif datatype == 'date':
-                if type(value) in [str, unicode]:
+                if type(value) is str:
                     tmp_val = datetime.datetime.strptime(value, '%Y-%m-%d').date()
                 elif type(value) is int:
                     tmp_val = datetime.date.fromtimestamp(value)
@@ -153,8 +151,8 @@ class Model(object):
     def __getattribute__(self, name):
         if (name is not '_Model__attributtes'
          and hasattr(self, "_Model__attributtes") 
-         and self.__attributtes.has_key(name) 
-         and self.__attributtes[name].has_key("datatype")
+         and name in self.__attributtes 
+         and "datatype" in self.__attributtes[name]
         ):
             datatype = self.__attributtes[name]["datatype"]
             if datatype == 'relation_has_one':
@@ -200,7 +198,7 @@ class Model(object):
                     "class_model":_attrs[_key]["class_model"],
                     "data": []
                 }
-            setattr(self, _key, _attrs[_key]["default"] if _attrs[_key].has_key("default") else None)
+            setattr(self, _key, _attrs[_key]["default"] if "default" in _attrs[_key] else None)
     def save(self):
         db = self.Databases[self.DB][self.TABLE]
         if self.__id is None:
@@ -209,7 +207,7 @@ class Model(object):
             results = db.update(self.__updated__attr,
                 where=[(self._primary_key, self.__id)]
             )
-        print results.result
+        print(results.result)
 
     @staticmethod
     def _integer(default = 0):
@@ -230,13 +228,6 @@ class Model(object):
         return {
             "datatype" : "str",
             "default": str(default) if default else None
-        }
-
-    @staticmethod
-    def _unicode(default = None):
-        return {
-            "datatype" : "unicode",
-            "default": unicode(default) if default else None
         }
 
     @staticmethod

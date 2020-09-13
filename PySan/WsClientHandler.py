@@ -1,5 +1,5 @@
 from ErrorHandler import WSError
-import Websck
+from . import Websck
 import traceback
 import ssl, json, cgi
 from Applications import apps as Apps

@@ -183,7 +183,7 @@ class Query:
 
     @staticmethod
     def _normailize(val):
-        if type(val) in [str, unicode]:
+        if type(val) is str:
             return "'"+val.replace('\'', '\'\'')+"'"
         elif type(val) in [int, float, long]:
             return str(val)

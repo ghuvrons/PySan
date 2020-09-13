@@ -1,8 +1,11 @@
 from __future__ import print_function
-from PySan.SocketSVR import SocketSVR
-from PySan.SocketFileSVR import SocketFileSVR
-from PySan.ClientHandler import HTTPHandler
-from PySan.Base.App import App as BaseApp
+from . import Base
+from . import Database
+from .SocketSVR import SocketSVR
+from .SocketFileSVR import SocketFileSVR
+from .ClientHandler import HTTPHandler
+from .Base.App import App as BaseApp
+from .HTTPServerSan import HTTPServerSan
 import traceback, sys, os, threading, json
 
 # This must be the first statement before other statements.
@@ -37,18 +40,17 @@ class socketHandle(SocketSVR):
     def handsacking(self, sock):
         return True
     def onNewClient(self, sock, addr):
-        print("new web client")
-        HTTPH = HTTPHandler(sock, addr, Applications = self.applications)
+        print("new web client", addr)
+        HTTPH = HTTPHandler(sock, addr, Applications = self.applications, server_sock = self.server_socket)
         self.clients.append(HTTPH)
         HTTPH.start()
-        def onClose(s):
+        def finish(s):
             try:
-                print("removing", addr)
                 self.clients.remove(s)
                 print("removed", addr)
             except:
                 pass
-        HTTPH.onClose = onClose
+        HTTPH.finish = finish
     def onNewSSLClient(self, sock, addr):
         print("new ssl web client")
         HTTPH = HTTPHandler(sock, addr, isSSL = True, Applications = self.applications)
@@ -56,7 +58,6 @@ class socketHandle(SocketSVR):
         HTTPH.start()
         def onClose(s):
             try:
-                print("removing", addr)
                 self.clients.remove(s)
                 print("removed", addr)
             except:
@@ -66,24 +67,28 @@ class socketHandle(SocketSVR):
 class PySan:
     def __init__(self):
         self.applications = {}
-        self.clients = []
         self.server = None
         self.host = "0.0.0.0"
-        self.port = 8000
-        self.sslPort = 8001
+        self.port = 3000
+        self.sslPort = 3001
         main_module = sys.modules["__main__"]
         self.main_path = os.path.dirname(os.path.abspath(main_module.__file__))
     def start(self):
         self.setting = SettingHandler(self.main_path+"/setting.sock")
         self.setting.cmd = self.cmd
         self.setting.start()
-        self.server = socketHandle(self.host, self.port, self.sslPort)
-        self.server.clients = self.clients
+        # self.server = socketHandle(self.host, self.port, self.sslPort)
+        # self.server.clients = self.clients
+        # self.server.applications = self.applications
+        # self.server.run()
+
+        self.server = HTTPServerSan("0.0.0.0", 3000, ClientHandler.HTTPHandler)
         self.server.applications = self.applications
-        self.server.run()
+        self.server.serve_forever()
+
     def cmd(self, sock, cmd, app):
         try:
-            if app and not cmd == 'start' and not self.applications.has_key(app):
+            if app and not cmd == 'start' and not app in self.applications:
                 sock.send("Not found module "+app)
                 sock.shutdown(1)
                 sock.close()
@@ -110,7 +115,7 @@ class PySan:
             else:
                 sock.shutdown(1)
                 sock.close()
-        except Exception, e:
+        except Exception:
             g = traceback.format_exc()
             print(g)
     def addVHost(self, domain):
@@ -142,12 +147,6 @@ class PySan:
         #     return g
     def close(self):
         self.setting.close()
-        self.server.close()
+        self.server.server_close()
         for k in self.applications.keys():
             self.applications[k].close()
-        for c in self.clients:
-            try:
-                c.close()
-            except Exception as e:
-                print("closing error", c)
-                pass

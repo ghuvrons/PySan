@@ -1,8 +1,7 @@
-import MySQLdb
 import threading
 import time
-from Connection import Connection
-from Query import Query
+from .Connection import Connection
+from .Query import Query
 
 class db:
     Q = Query

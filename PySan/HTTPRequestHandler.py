@@ -5,13 +5,14 @@ import random
 import socket # For gethostbyaddr() hm
 import json, decimal
 import mimetypes
+import traceback
 from warnings import filterwarnings, catch_warnings
 from ssl import SSLError
 with catch_warnings():
-    if sys.py3kwarning:
+    if '3' in sys._xoptions and sys._xoptions['3']:
         filterwarnings("ignore", ".*mimetools has been removed",
                         DeprecationWarning)
-    import mimetools
+    import email
     
 def encode_complex(obj): 
     if isinstance(obj, complex): 
@@ -21,8 +22,7 @@ def encode_complex(obj):
     raise TypeError(repr(obj) + " is not JSON serializable.") 
 
 class HTTPRequestHandler(threading.Thread):
-    sys_version = "Citrapay"
-
+    sys_version = "Pythons"
     server_version = "janoko"
     default_request_version = "HTTP/0.9"
     rbufsize = -1
@@ -36,12 +36,19 @@ class HTTPRequestHandler(threading.Thread):
         self.msg = ''
         self.cookie_id = None
         self.hostname = None
+        self.app = None
+        self.rfile = None
+        self.wfile = None
+        self.connection = None
     def parse_request(self):
         self.command = None  # set in case of error on the first line
         self.request_version = version = self.default_request_version
         self.close_connection = 1
-        requestline = self.raw_requestline
+        requestline = self.raw_requestline.decode("utf-8")
+        print(type(requestline))
+        print(requestline)
         requestline = requestline.rstrip('\r\n')
+        print(requestline)
         self.requestline = requestline
         words = requestline.split()
         if len(words) == 3:
@@ -77,7 +84,7 @@ class HTTPRequestHandler(threading.Thread):
         self.command, self.path, self.request_version = command, path, version
 
         # Examine the headers and look for a Connection directive
-        self.headers = self.MessageClass(self.rfile, 0)
+        self.headers = email.message_from_file(self.rfile)
         hostname = self.headers.get('Host', "").split(':')[0]
         if self.hostname == None:
             self.hostname = hostname
@@ -149,21 +156,23 @@ class HTTPRequestHandler(threading.Thread):
             method()
             self.wfile.flush() #actually send the response if not already done.
             self.respone_headers.clear()
-        except socket.timeout, e:
+        except socket.timeout as e:
             print("sock timeout>", e)
             #a read or a write timed out.  Discard this connection
             self.log_error("Request timed out: %r", e)
             self.connection.shutdown(1)
             self.close_connection = 1
             return
-        except SSLError, e:
+        except SSLError as e:
             print("sock e ssl >", e)
             #a read or a write timed out.  Discard this connection
             self.log_error("Request timed out: %r", e)
             self.connection.shutdown(1)
             self.close_connection = 1
             return
-        except Exception, e:
+        except Exception as e:
+            g = traceback.format_exc()
+            print(g)
             print("sock some error>", e)
             self.close_connection = 1
             return
@@ -217,10 +226,10 @@ class HTTPRequestHandler(threading.Thread):
         self.respone_headers[key] = value
     def send_response_message(self, code, msg = '', header_message = None):
         self.send_response(code, header_message)
-        if type(msg) == file:
+        if 'name' in dir(msg):
             self.send_header("Content-Length", os.fstat(msg.fileno()).st_size)
             ext = msg.name.split('.')[-1]
-            if self.contentType.has_key(ext):
+            if ext in self.contentType:
                 self.send_header("Content-Type", self.contentType[ext])
             else:
                 ext_type = mimetypes.guess_type(msg.name)[0]
@@ -236,13 +245,13 @@ class HTTPRequestHandler(threading.Thread):
         else:
             msg = '{}'.format(msg)
             self.send_header("Content-Length", len(msg))
-        if self.headers.has_key("Connection"):
+        if "Connection" in self.headers:
             self.send_header("Connection", self.headers["Connection"])
         for key in self.respone_headers.keys():
             self.send_header(key, self.respone_headers[key])
         self.end_headers()
 
-        if type(msg) == file:
+        if 'name' in dir(msg):
             ll = 0
             while True:
                 s = msg.read()
@@ -336,14 +345,14 @@ class HTTPRequestHandler(threading.Thread):
         if not 'COOKIES' in globals():
             global COOKIES
             COOKIES = {}
-        if not (self.headers.has_key("Cookie")):
+        if not ("Cookie" in self.header):
             self.cookie_id = self.generate_id_cookies()
-            while COOKIES.has_key(self.cookie_id):
+            while self.cookie_id in COOKIES:
                 self.cookie_id = self.generate_id_cookies()                
             self.set_respone_header('Set-Cookie', "PHPSESSID="+self.cookie_id+"; path=/")
         else:
             self.cookie_id = self.headers["Cookie"].lstrip("PHPSESSID=");
-        if not COOKIES.has_key(self.cookie_id):    
+        if not self.cookie_id in COOKIES:    
             COOKIES[self.cookie_id] = {}
         
     def set_cookie(self, key, value):
@@ -355,7 +364,7 @@ class HTTPRequestHandler(threading.Thread):
         if self.cookie_id == None:
             print("cookie not be started")
             return None
-        if COOKIES[self.cookie_id].has_key(key):
+        if key in COOKIES[self.cookie_id]:
             return COOKIES[self.cookie_id][key]
         else:
             return None
@@ -391,7 +400,7 @@ class HTTPRequestHandler(threading.Thread):
     protocol_version = "HTTP/1.0"
 
     # The Message-like class used to parse headers
-    MessageClass = mimetools.Message
+    MessageClass = email.message_from_file
     
     # Table mapping response codes to messages; entries have the
     # form {code: (shortmessage, longmessage)}.

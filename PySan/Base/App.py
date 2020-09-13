@@ -81,7 +81,7 @@ class App:
                 __import__(db_config['driver'])
                 self.Databases[db_key] = sys.modules[db_config['driver']].db(db_config['config'])
         except Exception as e:
-            print e
+            print(e)
             pass
         
         try:
@@ -100,7 +100,7 @@ class App:
                 self.Services[sr_key].Databases = self.Databases
                 self.Services[sr_key].start()
         except Exception as e:
-            print "error : ", e
+            print( "error : ", e)
             pass
 
         try:
@@ -125,7 +125,7 @@ class App:
                 # __import__('pprint')
                 # print pprint.pprint(dir())
         except Exception as e:
-            print "error : ", e
+            print("error : ", e)
             pass
 
         try:
@@ -140,14 +140,14 @@ class App:
             ws_router_json.close()
             self.route_config['ws'] = r.jsonToRoute(ws_router)
         except Exception as e:
-            print "error : ", e
+            print("error : ", e)
             pass
 
     def printAllModules(self):
         modules = sys.modules.keys()
         modules.sort()
         for m in modules:
-            print m
+            print(m)
     def close(self):
         self.Session.close()
         if 'Module' in dir(self.app_module) and hasattr(self.app_module.Module, 'close'):

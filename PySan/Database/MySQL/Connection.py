@@ -1,5 +1,5 @@
-from Query import Query
-import mysql.connector
+from .Query import Query
+import pymysql
 import threading
 class Connection(threading.Thread):
     def __init__(self, host, user, password, database, port, onAvailable = None, onExpired = None):
@@ -9,7 +9,7 @@ class Connection(threading.Thread):
         self.user = user
         self.password = password
         self.database = database
-        self.db = mysql.connector.connect(
+        self.db = pymysql.connect(
             host=self.host, 
             user=self.user, 
             password=self.password, 
@@ -29,7 +29,7 @@ class Connection(threading.Thread):
                 results = cursor.fetchall()
             else:
                 results = cursor.lastrowid
-                print results
+                print(results)
             self.db.commit()
             cursor.close()
             query.result = results

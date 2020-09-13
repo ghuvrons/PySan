@@ -13,7 +13,7 @@ class session:
         self.data[param] = value
         self.idle = datetime.datetime.now()
     def getData(self, param):
-        if self.data.has_key(param):
+        if param in self.data:
             self.idle = datetime.datetime.now()
             return self.data[param]
         return None
@@ -52,22 +52,22 @@ class SessionHandler(threading.Thread):
         return sesid
     def set_key(self, requestHeandler):
         session_id = self.generate_id_cookies()
-        while self.sessionList.has_key(session_id):
+        while session_id in self.sessionList:
             session_id = self.generate_id_cookies()
         requestHeandler.set_respone_header('Set-Cookie', 'PySessID='+session_id+';path=/')
         return session_id
     def get_cookies(self, requestHeandler):
         cookies = {}
-        if requestHeandler.headers.has_key('Cookie'):
+        if 'Cookie' in requestHeandler.headers:
             for cookies_header in requestHeandler.headers['Cookie'].split('; '):
                 key, val = cookies_header.split('=')
                 cookies[key] = val
         return cookies
     def create(self, requestHeandler):
         cookies = self.get_cookies(requestHeandler)
-        if cookies.has_key('PySessID'):
+        if 'PySessID' in cookies:
             session_id = cookies['PySessID']
-            if not self.sessionList.has_key(session_id):
+            if not session_id in  self.sessionList:
                 session_id = self.set_key(requestHeandler)
                 self.sessionList[session_id] = session(session_id)
             return self.sessionList[session_id]
