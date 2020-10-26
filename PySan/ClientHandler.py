@@ -1,11 +1,19 @@
-from .HTTPRequestHandler import HTTPRequestHandler
-from .ErrorHandler import *
+from .ErrorHandler import PySanError, HTTPError, WSError
 import traceback
 import threading
 import socket
-import os, ssl, json, cgi
+import mimetypes
+import os, ssl, json, cgi, decimal
+from inspect import signature
 from . import Websck
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPStatus
+
+def encode_complex(obj): 
+    if isinstance(obj, complex): 
+        return [obj.real, obj.imag] 
+    elif isinstance(obj, decimal.Decimal):
+        return float(obj)
+    raise TypeError(repr(obj) + " is not JSON serializable.") 
 
 class HTTPHandler(BaseHTTPRequestHandler):
     def __init__(self, client_sock, client_address, isSSL = False, Applications = {}, httpServerSan = None):
@@ -20,9 +28,10 @@ class HTTPHandler(BaseHTTPRequestHandler):
         self.session = None
         self.ws = None
         self.client_sock = client_sock
-        self.server = httpServerSan
-        threading.Thread.__init__(self)
-        BaseHTTPRequestHandler.__init__(self, client_sock, client_address, self.server.server_socket)
+        self.httpServerSan = httpServerSan
+        self.httpServerSan.clients.append(self)
+        BaseHTTPRequestHandler.__init__(self, client_sock, client_address, self.httpServerSan.server_socket)
+
     def servername_callback(self, sock, req_hostname, cb_context, as_callback=True):
         self.hostname = req_hostname
         try:
@@ -54,9 +63,11 @@ class HTTPHandler(BaseHTTPRequestHandler):
 
     def onClose(self, s):
         pass
+
     def onEstablished(self):
         Apps = self.Applications
         self.app = Apps[self.hostname] if self.hostname in Apps else Apps["localhost"]
+
     def middlingWare(self, method, middleware):
         middleware_has_run = []
         cookies = self.app.Session.get_cookies(self)
@@ -76,6 +87,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
             else:
                 if not mw():
                     raise HTTPError(500)
+
     def do_GET(self):
         self.onEstablished()
         try:
@@ -83,6 +95,10 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 self.ws = Websck.ClientHandler(self)
                 self.ws.onMessage = self.__ws_do__
                 self.session = self.app.Session.create(self)
+                self.__ws_do__(json.dumps({
+                    'request': "",
+                    'data': None
+                }))
                 self.ws.handle()
                 return
             self.message = None
@@ -90,6 +106,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
         except Exception:
             traceback.print_exc()
             self.send_response_message(500, "\"unknown error\"")
+
     def do_POST(self):
         self.onEstablished()
         try:
@@ -108,6 +125,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
         except Exception:
             traceback.print_exc()
             self.send_response_message(500, "\"unknown error\"")
+
     def do_OPTIONS(self):
         try:
             req_headers = self.headers["Access-Control-Request-Headers"].replace(' ', '').split(',') if "Access-Control-Request-Method" in self.headers else []
@@ -155,6 +173,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
         except Exception:
             traceback.print_exc()
             self.send_response_message(500, "\"unknown error\"")
+
     def _do_(self, method):
         try:
             log = str(self.client_address)
@@ -190,10 +209,11 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 raise HTTPError(404, 'not found')
             self.middlingWare(method, middleware)
             response_message = ""
-            if controller.func_code.co_argcount == 3:
+            controller_arg_len = len(signature(controller)._parameters)
+            if controller_arg_len == 2:
                 self.session = self.session if self.session else self.app.Session.create(self)
                 response_message = controller(self, self.session)
-            elif controller.func_code.co_argcount == 2:
+            elif controller_arg_len == 1:
                 response_message = controller(self)
             else:
                 response_message = controller()
@@ -205,14 +225,12 @@ class HTTPHandler(BaseHTTPRequestHandler):
             print(e)
             self.app.Log.write(e)
             self.send_response_message(500, "Server error.")
+
     def __ws_do__(self, msg):
-        
         try:
             msg = json.loads(msg)
         except ValueError:
-            self.sendMessage(msg)
             return
-        
         '''
         msg = {
             'request': ...
@@ -238,10 +256,10 @@ class HTTPHandler(BaseHTTPRequestHandler):
             self.message = msg["data"]
             self.middlingWare('ws', middleware)
             response_message = ""
-            if controller.func_code.co_argcount == 3:
-                self.session = self.session if self.session else self.app.Session.create(self)
+            controller_arg_len = len(signature(controller)._parameters)
+            if controller_arg_len == 2:
                 response_message = controller(self, self.session)
-            elif controller.func_code.co_argcount == 2:
+            elif controller_arg_len == 1:
                 response_message = controller(self)
             else:
                 response_message = controller()
@@ -250,8 +268,11 @@ class HTTPHandler(BaseHTTPRequestHandler):
             errorCode = e.args[0]
             self.ws.sendRespond(respond if respond else request, errorCode, "Not Found.")
         except Exception:
-            self.app.Log.write(traceback.format_exc())
+            e = traceback.format_exc()
+            print(e)
+            self.app.Log.write(e)
             self.ws.sendRespond(respond if respond else request, 500, "Server error.")
+
     def _404_(self):
         self.send_response_message(404, "Not Found.")
 
@@ -310,7 +331,6 @@ class HTTPHandler(BaseHTTPRequestHandler):
         if "Connection" in self.headers:
             self.send_header("Connection", self.headers["Connection"])
         for key in self.respone_headers.keys():
-            print("send_h", key)
             self.send_header(key, self.respone_headers[key])
         self.end_headers()
 
@@ -324,7 +344,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
         else:
             self.client_sock.send(msg.encode('utf-8'))
     def close(self):
-        self.server.shutdown_request(self.client_sock)
+        self.httpServerSan.shutdown_request(self.client_sock)
         self.close_connection = 1
     def __del__(self):
         print("client remove")

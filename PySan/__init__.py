@@ -77,12 +77,8 @@ class PySan:
         self.setting = SettingHandler(self.main_path+"/setting.sock")
         self.setting.cmd = self.cmd
         self.setting.start()
-        # self.server = socketHandle(self.host, self.port, self.sslPort)
-        # self.server.clients = self.clients
-        # self.server.applications = self.applications
-        # self.server.run()
 
-        self.server = HTTPServerSan("0.0.0.0", 3000, ClientHandler.HTTPHandler)
+        self.server = HTTPServerSan("0.0.0.0", 3000, HTTPHandler)
         self.server.applications = self.applications
         self.server.serve_forever()
 
@@ -131,7 +127,7 @@ class PySan:
                 if k.startswith(domain+".") and sys.modules[k] != None:
                     del sys.modules[k]
             
-        except Exception as e:
+        except Exception:
             g = traceback.format_exc()
             return g
     def reloadHost(self, domain, module):
@@ -146,6 +142,8 @@ class PySan:
         #     g = traceback.format_exc()
         #     return g
     def close(self):
+        for c in self.server.clients:
+            c.close()
         self.setting.close()
         self.server.server_close()
         for k in self.applications.keys():

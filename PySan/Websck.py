@@ -21,7 +21,6 @@ class ClientHandler():
         self.session = None
     #handsacking return protocol
     def handsacking(self):
-        print("handshaking")
         origin = self.HTTPReqHandler.headers.get("Origin")
         try:
             if origin in self.HTTPReqHandler.app.config["Access-Control-Allow"]["Origins"]:
@@ -57,8 +56,6 @@ class ClientHandler():
         combined = (key + guid).encode('UTF-8')
         hashed = sha1(combined).digest()
         result = base64.b64encode(hashed).decode('UTF-8')
-        print(combined)
-        print(result)
         return result
     
     def decodeMessage(self, data):

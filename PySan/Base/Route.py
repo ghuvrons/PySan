@@ -68,9 +68,9 @@ class Router:
         if len(url) == 0:
             if method in self.methods:
                 if isGetRespond:
-                    return self.methods[method]['middleware'], self.methods[method]['controller'], {}, self.methods[method]['respond'];
+                    return self.methods[method]['middleware'], self.methods[method]['controller'], {}, self.methods[method]['respond']
                 else:
-                    return self.methods[method]['middleware'], self.methods[method]['controller'], {};
+                    return self.methods[method]['middleware'], self.methods[method]['controller'], {}
             else: return ([], None, {}, None) if isGetRespond else ([], None, {})
         current_url = url.pop(0)
         if current_url in self.sub:
@@ -115,12 +115,12 @@ class Router:
                     else:
                         return '(.*)'
                 def replaceSpesChar(s):
-                    spesChar = ['(',')','[',']','<','>','?','+','\\','*','.','!','$','^','\|']
+                    spesChar = ['(',')','[',']','<','>','?','+','\\','*','.','!','$','^','|']
                     level = 0
                     result = ''
                     for c in s:
-                        if c == '{': level+=1;
-                        elif c == '}': level-=1;
+                        if c == '{': level+=1
+                        elif c == '}': level-=1
                         if level==0 and c in spesChar:
                             result += '\\'
                         result += c
