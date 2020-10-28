@@ -38,7 +38,6 @@ class SocketFileSVR:
     def run(self):
         os_input = [self.rpipe, self.server_socket]
         while not self.isClosed:
-            print("listening")
             readable = select.select(os_input, [], os_input)[0]
             for r in readable:
                 if r == self.server_socket:

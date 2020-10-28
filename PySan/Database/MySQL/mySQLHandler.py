@@ -139,7 +139,6 @@ class mySQLHandler:
 				flag = True
 			column += col
 		sql = "SELECT "+column+" FROM "+table+" WHERE "+_where
-		#print(sql)
 		try:
 			db = self.newConnection()
 			cursor = self.execute(db, sql)

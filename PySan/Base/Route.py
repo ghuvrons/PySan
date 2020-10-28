@@ -105,10 +105,10 @@ class Router:
         else: 
             current_path = path.pop(0)
             if re.search(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', current_path):
-                print("this path is regex")
+                # print("this path is regex")
                 
                 def dashrepl(matchobj):
-                    print(matchobj.group(0))
+                    # print(matchobj.group(0))
                     m = re.match(r"{[^{}?]+\?((?:[^{}]+(?:{\d+\,?\d*})?)+)}", matchobj.group(0))
                     if m:
                         return '('+m.group(1).replace('(', '(?:')+')'
@@ -163,7 +163,7 @@ class BaseRoute:
 
     def generateRoute(self, route_config):
         self.group(route_config)
-        pprint.pprint(route_config)
+        # pprint.pprint(route_config)
     def group(self, route_config, parent_path = '/', conf_middleware=[]):
         for conf in route_config:
             if "controller" in conf:

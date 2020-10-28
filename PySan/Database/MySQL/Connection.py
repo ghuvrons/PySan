@@ -29,7 +29,6 @@ class Connection(threading.Thread):
                 results = cursor.fetchall()
             else:
                 results = cursor.lastrowid
-                print(results)
             self.db.commit()
             cursor.close()
             query.result = results
