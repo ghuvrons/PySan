@@ -36,49 +36,28 @@ class SettingHandler(threading.Thread, SocketFileSVR):
         app = command[1] if len(command) > 1 else None
         self.cmd(sock, command[0], app)
 
-class socketHandle(SocketSVR):
-    def handsacking(self, sock):
-        return True
-    def onNewClient(self, sock, addr):
-        print("new web client", addr)
-        HTTPH = HTTPHandler(sock, addr, Applications = self.applications, server_sock = self.server_socket)
-        self.clients.append(HTTPH)
-        HTTPH.start()
-        def finish(s):
-            try:
-                self.clients.remove(s)
-                print("removed", addr)
-            except:
-                pass
-        HTTPH.finish = finish
-    def onNewSSLClient(self, sock, addr):
-        print("new ssl web client")
-        HTTPH = HTTPHandler(sock, addr, isSSL = True, Applications = self.applications)
-        self.clients.append(HTTPH)
-        HTTPH.start()
-        def onClose(s):
-            try:
-                self.clients.remove(s)
-                print("removed", addr)
-            except:
-                pass
-        HTTPH.onClose = onClose
-
 class PySan:
-    def __init__(self):
+    def __init__(self, host = "127.0.0.1", port=3000):
         self.applications = {}
         self.server = None
-        self.host = "0.0.0.0"
-        self.port = 3000
-        self.sslPort = 3001
+        self.host = host
+        self.port = port
         main_module = sys.modules["__main__"]
         self.main_path = os.path.dirname(os.path.abspath(main_module.__file__))
     def start(self):
-        self.setting = SettingHandler(self.main_path+"/setting.sock")
-        self.setting.cmd = self.cmd
-        self.setting.start()
+        # self.setting = SettingHandler(self.main_path+"/setting.sock")
+        # self.setting.cmd = self.cmd
+        # self.setting.start()
 
-        self.server = HTTPServerSan("0.0.0.0", 3000, HTTPHandler)
+        start_message = '''
+PySan start on:
+Host : {host}
+Port : {port}
+Mode : -
+        '''
+        print(start_message.format(host = self.host, port = self.port))
+
+        self.server = HTTPServerSan(self.host, self.port, HTTPHandler)
         self.server.applications = self.applications
         self.server.serve_forever()
 
@@ -114,10 +93,14 @@ class PySan:
         except Exception:
             g = traceback.format_exc()
             print(g)
-    def addVHost(self, domain):
-        __import__(domain)
-        app_mod = sys.modules[domain]
-        self.applications[domain] = BaseApp(app_mod, app_mod.config)
+            
+    def addVHost(self, vhosts):
+        for vh in vhosts:
+            _project = vhosts[vh]
+            __import__(_project)
+            app_mod = sys.modules[_project]
+            self.applications[vh] = BaseApp(app_mod, app_mod.config)
+
     def closeHost(self, domain):
         try:
             self.applications[domain].close()
@@ -130,6 +113,7 @@ class PySan:
         except Exception:
             g = traceback.format_exc()
             return g
+    
     def reloadHost(self, domain, module):
         pass
         # try:
@@ -141,10 +125,11 @@ class PySan:
         # except Exception as e:
         #     g = traceback.format_exc()
         #     return g
+
     def close(self):
         for c in self.server.clients:
             c.close()
-        self.setting.close()
+        # self.setting.close()
         self.server.server_close()
         for k in self.applications.keys():
             self.applications[k].close()

@@ -60,7 +60,7 @@ class SessionHandler(threading.Thread):
         cookies = {}
         if 'Cookie' in requestHeandler.headers:
             for cookies_header in requestHeandler.headers['Cookie'].split('; '):
-                key, val = cookies_header.split('=')
+                key, val = cookies_header.split('=', 1)
                 cookies[key] = val
         return cookies
     def create(self, requestHeandler):
@@ -75,7 +75,6 @@ class SessionHandler(threading.Thread):
         self.sessionList[session_id] = session(session_id)
         return self.sessionList[session_id]
     def run(self):
-        print("seasion starting")
         while not self.isClose.wait(60):
             now = datetime.datetime.now()
             s_l = sorted(self.sessionList.values(), key=lambda g:g.idle+datetime.timedelta(seconds=g.timeout))
@@ -86,6 +85,5 @@ class SessionHandler(threading.Thread):
                     break
     def close(self):
         self.isClose.set()
-        print('saving session....')
         with open(self.path_save, 'wb') as output:  # Overwrites any existing file.
             pickle.dump(self.sessionList, output, pickle.HIGHEST_PROTOCOL)

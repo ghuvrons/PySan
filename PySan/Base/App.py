@@ -1,7 +1,7 @@
 from PySan.Base.Log import Log
 from PySan.Base.Session import SessionHandler
 from PySan.Base.Route import BaseRoute, Route
-import sys, json, pprint
+import sys, os, json, pprint
 
 class App:
     def __init__(self, app_module, config = {}):
@@ -45,6 +45,14 @@ class App:
         self.Log = Log()
         self.default_config.update(config)
         self.config = self.default_config
+
+        if 'SSL' in self.config:
+            self.ssl_context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=self.config["SSL"]["ca_certs"])
+            self.ssl_context.load_cert_chain(
+                certfile=self.config["SSL"]["certfile"],
+                keyfile=self.config["SSL"]["keyfile"]
+            )
+
         self.Session = SessionHandler(self.config["Session-path"])
         self.Session.start()
     def importAppSystem(self):
@@ -59,6 +67,7 @@ class App:
             controller_json.close()
             __import__(app_mod_name+".Controller", fromlist=[str(s) for s in controller_list], globals=globals())
         except Exception as e:
+            print( "Controller error : ", e)
             pass
 
         try:
@@ -67,7 +76,8 @@ class App:
             middleware_json.close()
 
             __import__(app_mod_name+".Middleware", fromlist=[str(s) for s in middleware_list], globals=globals())
-        except:
+        except Exception as e:
+            print( "Middleware error : ", e)
             pass
 
         try:
@@ -81,7 +91,7 @@ class App:
                 __import__(db_config['driver'])
                 self.Databases[db_key] = sys.modules[db_config['driver']].db(db_config['config'])
         except Exception as e:
-            print(e)
+            print( "Database error : ", e)
             pass
         
         try:
@@ -100,7 +110,7 @@ class App:
                 self.Services[sr_key].Databases = self.Databases
                 self.Services[sr_key].start()
         except Exception as e:
-            print( "error : ", e)
+            print( "Service error : ", e)
             pass
 
         try:
@@ -125,7 +135,7 @@ class App:
                 # __import__('pprint')
                 # print pprint.pprint(dir())
         except Exception as e:
-            print("error : ", e)
+            print("Model error : ", e)
             pass
 
         try:
@@ -140,7 +150,7 @@ class App:
             ws_router_json.close()
             self.route_config['ws'] = r.jsonToRoute(ws_router)
         except Exception as e:
-            print("error : ", e)
+            print("Route error : ", e)
             pass
 
     def printAllModules(self):

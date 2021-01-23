@@ -5,4 +5,7 @@ class Controller:
         self.Modules = Modules
         self.Services = Services
         self.appPath = appPath
-        
+        self._init_()
+
+    def _init_(self):
+        pass

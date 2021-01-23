@@ -16,11 +16,10 @@ def encode_complex(obj):
     raise TypeError(repr(obj) + " is not JSON serializable.") 
 
 class HTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, client_sock, client_address, isSSL = False, Applications = {}, httpServerSan = None):
+    def __init__(self, client_sock, client_address, Applications = {}, httpServerSan = None):
         if Applications == {}:
             raise PySanError("Application module is not set yet.")
         self.Applications = Applications
-        self.isSSL = isSSL
         client_sock.settimeout(100) 
         self.respone_headers = {}
         self.hostname = None
@@ -30,22 +29,25 @@ class HTTPHandler(BaseHTTPRequestHandler):
         self.client_sock = client_sock
         self.httpServerSan = httpServerSan
         self.httpServerSan.clients.append(self)
+        self.isSetupSuccess = True
+        self.isSSL = False
         BaseHTTPRequestHandler.__init__(self, client_sock, client_address, self.httpServerSan.server_socket)
 
     def servername_callback(self, sock, req_hostname, cb_context, as_callback=True):
         self.hostname = req_hostname
         try:
-            app = self.Applications.get(req_hostname)
-            context = app.ssl_context
-            sock.context = context
+            app = self.Applications.get(req_hostname, self.Applications['locallhost'])
+            sock.context = app.ssl_context
+            self.isSSL = True
         except Exception:
-            pass
+            g = traceback.format_exc()
+            print("ssl error", g)
         
     def setup(self):
         try:
+            context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+            context.set_servername_callback(self.servername_callback)
             if self.isSSL:
-                context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-                context.set_servername_callback(self.servername_callback)
                 context.load_cert_chain(certfile="/etc/ssl/certs/ssl-cert-snakeoil.pem",
                                         keyfile="/etc/ssl/private/ssl-cert-snakeoil.key")
                 self.client_sock = context.wrap_socket(
@@ -54,11 +56,11 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 )
         except Exception:
             g = traceback.format_exc()
-            self.client_sock.shutdown(1)
-            print("closed", self.client_address)
-            self.onClose(self)
-            self.client_sock.close()
-            return
+            print("ssl error", g)
+            # self.client_sock.shutdown(1)
+            # self.onClose(self)
+            # self.client_sock.close()
+            self.isSetupSuccess = False
         BaseHTTPRequestHandler.setup(self)
 
     def onClose(self, s):
@@ -66,6 +68,10 @@ class HTTPHandler(BaseHTTPRequestHandler):
 
     def onEstablished(self):
         Apps = self.Applications
+        if self.hostname == None:
+            host = self.headers.get("Host", "").split(":")[0]
+            if host != '':
+                self.hostname = host
         self.app = Apps[self.hostname] if self.hostname in Apps else Apps["localhost"]
 
     def middlingWare(self, method, middleware):
@@ -77,11 +83,12 @@ class HTTPHandler(BaseHTTPRequestHandler):
             if not mw and mw in middleware_has_run:
                 continue
             middleware_has_run.append(mw)
-            if mw.func_code.co_argcount == 3:
+            mw_arg_len = len(signature(mw)._parameters)
+            if mw_arg_len == 2:
                 self.session = self.session if self.session else self.app.Session.create(self)
                 if not mw(self, self.session):
                     raise HTTPError(500)
-            elif mw.func_code.co_argcount == 2:
+            elif mw_arg_len == 1:
                 if not mw(self):
                     raise HTTPError(500)
             else:
@@ -180,8 +187,8 @@ class HTTPHandler(BaseHTTPRequestHandler):
             log += "\n\t{}".format(self.path)
             log += "\n\t{}".format(self.hostname)
             self.app.Log.write(log)
-            if os.path.exists(self.app.appPath+'/Web'+self.path):
-                path = (self.app.appPath+'/Web'+self.path).replace('/../', '/')
+            if os.path.exists(self.app.appPath+'/Public'+self.path):
+                path = (self.app.appPath+'/Public'+self.path).replace('/../', '/')
                 if os.path.isdir(path):
                     if path[-1]=='/':
                         path += 'index.html'
@@ -190,7 +197,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
                         self.send_response_message(301)
                         return
                 if os.path.isfile(path):
-                    f = open(path, 'r')
+                    f = open(path, 'rb')
                     self.send_response_message(200, f)
                     return
             middleware, controller, self.data = self.app.route['http'].search(self.path, method)
@@ -229,14 +236,13 @@ class HTTPHandler(BaseHTTPRequestHandler):
     def __ws_do__(self, msg):
         try:
             msg = json.loads(msg)
+            # msg = {
+            #     'request': ...
+            #     'data': ...
+            # }
         except ValueError:
             return
-        '''
-        msg = {
-            'request': ...
-            'data': ...
-        }
-        '''
+        
         if not self.app:
             Apps = self.Applications
             self.app = Apps[self.hostname] if self.hostname in Apps else Apps["localhost"]
@@ -263,13 +269,14 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 response_message = controller(self)
             else:
                 response_message = controller()
+            if respond == False:
+                return
             self.ws.sendRespond(respond if respond else request, 200, response_message)
         except WSError as e:
             errorCode = e.args[0]
             self.ws.sendRespond(respond if respond else request, errorCode, "Not Found.")
         except Exception:
             e = traceback.format_exc()
-            print(e)
             self.app.Log.write(e)
             self.ws.sendRespond(respond if respond else request, 500, "Server error.")
 
@@ -279,6 +286,13 @@ class HTTPHandler(BaseHTTPRequestHandler):
     def handle_one_request(self):
         try:
             self.raw_requestline = self.rfile.readline(65537)
+            if not self.isSetupSuccess:
+                self.requestline = ''
+                self.request_version = ''
+                self.command = ''
+                self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
+                self.close_connection = True
+                return
             if len(self.raw_requestline) > 65536:
                 self.requestline = ''
                 self.request_version = ''
@@ -337,12 +351,13 @@ class HTTPHandler(BaseHTTPRequestHandler):
         if 'name' in dir(msg):
             while True:
                 s = msg.read()
-                if s: self.client_sock.send(s.encode('utf-8'))
+                if s: self.client_sock.send(s)
                 else: break
             self.close_connection = 1
             msg.close()
         else:
-            self.client_sock.send(msg.encode('utf-8'))
+            if msg is not '':
+                self.client_sock.send(msg.encode('utf-8'))
     def close(self):
         self.httpServerSan.shutdown_request(self.client_sock)
         self.close_connection = 1

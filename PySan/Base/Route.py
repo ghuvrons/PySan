@@ -3,8 +3,8 @@ import re, pprint, json
 
 class Route:
     def group(self, *arg, **args):
-        key = ('path', 'middleware', 'group', )
-        obj = {'path':'/', 'middleware':[], 'group':[]}
+        key = ('url', 'middleware', 'group', )
+        obj = {'url':'/', 'middleware':[], 'group':[]}
         obj.update(args)
         i = 0
         for val in arg:
@@ -12,14 +12,14 @@ class Route:
             obj[key[i]] = val
             i+=1
         return {
-            'path': str(obj['path']), 
+            'url': str(obj['url']), 
             'middleware': obj['middleware'], 
             'sub': [x for x in obj['group']]
         }
     #respond for ws
     def route(self, *arg, **args):
-        key = ('path', 'controller', 'method', 'middleware', 'respond', )
-        obj = {'path':'/', 'controller':None, 'method':['get', 'post'], 'middleware':[], 'respond':None}
+        key = ('url', 'controller', 'method', 'middleware', 'respond', )
+        obj = {'url':'/', 'controller':None, 'method':['get', 'post'], 'middleware':[], 'respond':None}
         obj.update(args)
         i = 0
         for val in arg:
@@ -27,7 +27,7 @@ class Route:
             obj[key[i]] = val
             i+=1
         return {
-            'path': str(obj['path']), 
+            'url': str(obj['url']), 
             'controller': str(obj['controller']), 
             'methods': obj['method'], 
             'middleware': obj['middleware'], 
@@ -51,7 +51,7 @@ class Router:
             #"ws": {},
         }
         self.sub = {
-            #"sub_path": router
+            #"sub_url": router
         }
         self.sub_regrex = [
             #(regex, variables, router, ) # regex = reroute
@@ -92,8 +92,8 @@ class Router:
                     return result
         return ([], None, {}, None) if isGetRespond else ([], None, {})
         
-    def createRoute(self, path, methods, controller, middleware, respond = None):
-        if len(path) == 0:
+    def createRoute(self, url, methods, controller, middleware, respond = None):
+        if len(url) == 0:
             for method in methods:
                 method = method.lower()
                 if not method in self.methods:
@@ -103,9 +103,9 @@ class Router:
                         middleware.remove(mw)
                 self.methods[method]['middleware'].extend(middleware)
         else: 
-            current_path = path.pop(0)
-            if re.search(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', current_path):
-                # print("this path is regex")
+            current_url = url.pop(0)
+            if re.search(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', current_url):
+                # print("this url is regex")
                 
                 def dashrepl(matchobj):
                     # print(matchobj.group(0))
@@ -125,10 +125,10 @@ class Router:
                             result += '\\'
                         result += c
                     return result
-                regex_current_path = replaceSpesChar(current_path)
-                revar = re.sub(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', '{([^{}?]+)\??(?:[^{}]+(?:{\d+\,?\d*})?)*}', regex_current_path)
+                regex_current_url = replaceSpesChar(current_url)
+                revar = re.sub(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', '{([^{}?]+)\??(?:[^{}]+(?:{\d+\,?\d*})?)*}', regex_current_url)
                 variables = []
-                m = re.match(r'^'+revar+'$', current_path)
+                m = re.match(r'^'+revar+'$', current_url)
                 if m:
                     i = 0
                     while True:
@@ -137,14 +137,14 @@ class Router:
                             variables.append(m.group(i))
                         except:
                             break
-                regex = re.sub(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', dashrepl, regex_current_path)
+                regex = re.sub(r'{[^{}?]+\??([^{}]+({\d+\,?\d*})?)*}', dashrepl, regex_current_url)
                 tmp = (regex, variables, Router())
                 self.sub_regrex.append(tmp)
-                tmp[2].createRoute(path, methods, controller, middleware, respond)
+                tmp[2].createRoute(url, methods, controller, middleware, respond)
             else:
-                if not current_path in self.sub:
-                    self.sub[current_path] = Router()
-                self.sub[current_path].createRoute(path, methods, controller, middleware, respond)
+                if not current_url in self.sub:
+                    self.sub[current_url] = Router()
+                self.sub[current_url].createRoute(url, methods, controller, middleware, respond)
         return self
 
 class BaseRoute:
@@ -164,13 +164,13 @@ class BaseRoute:
     def generateRoute(self, route_config):
         self.group(route_config)
         # pprint.pprint(route_config)
-    def group(self, route_config, parent_path = '/', conf_middleware=[]):
+    def group(self, route_config, parent_url = '/', conf_middleware=[]):
         for conf in route_config:
             if "controller" in conf:
-                path_arr = (parent_path+'/'+conf['path']).split('/')
+                url_arr = (parent_url+'/'+conf['url']).split('/')
                 while True:
                     try:
-                        path_arr.remove('')
+                        url_arr.remove('')
                     except:
                         break
                 controller = self.controllerToCallable(conf['controller'])
@@ -179,11 +179,11 @@ class BaseRoute:
                     mw = self.middlewareToCallable(mw)
                     if mw not in middleware:
                         middleware.append(mw)
-                self.router.createRoute(path_arr, conf['methods'], controller, middleware, conf['respond'])
+                self.router.createRoute(url_arr, conf['methods'], controller, middleware, conf['respond'])
             elif "sub" in conf:
                 self.group(
                     conf['sub'], 
-                    (parent_path+'/'+conf['path']), 
+                    (parent_url+'/'+conf['url']), 
                     conf_middleware+(conf['middleware'] if 'middleware' in conf else [])
                 )
     def controllerToCallable(self, controller):

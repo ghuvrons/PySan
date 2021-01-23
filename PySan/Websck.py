@@ -34,22 +34,24 @@ class ClientHandler():
             pass
         
         key = self.HTTPReqHandler.headers.get('Sec-WebSocket-Key', '')
+        acc = self.hashKey(key)
         protocol = self.HTTPReqHandler.headers.get('Sec-WebSocket-Protocol')
+        version = self.HTTPReqHandler.headers.get('Sec-WebSocket-Version')
         
         self.HTTPReqHandler.set_respone_header('Upgrade', "WebSocket")
         self.HTTPReqHandler.set_respone_header('Connection', "Upgrade")
-        self.HTTPReqHandler.set_respone_header('Sec-WebSocket-Accept', self.hashKey(key))
+        
+        self.HTTPReqHandler.set_respone_header('Sec-WebSocket-Accept', acc)
         if protocol:
             self.HTTPReqHandler.set_respone_header('Sec-WebSocket-Protocol', protocol)
         self.HTTPReqHandler.set_respone_header('Server', "Python-Websocket-Janoko")
         
-        self.HTTPReqHandler.send_response_message(101, header_message = "Web Socket Protocol Handshake")
+        self.HTTPReqHandler.send_response_message(101, header_message = "Switching Protocols")
         if protocol:
             self.protocol = protocol
-            return protocol
         else:
             self.protocol = None
-            return True
+        return True
 
     def hashKey(self, key):
         guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -162,13 +164,14 @@ class ClientHandler():
         self.sendMessage(json.dumps(resp))
         
     def onNew(self):
-        print("new protocol ",self.protocol)
-        print(self.addr)
+        pass
 
     def onMessage(self, msg):
-        print('MSG > ' + msg)
+        pass
+
     def handle(self):
         if self.handsacking():
+            print("Ws starting")
             self.onNew()
             self.HTTPReqHandler.connection.settimeout(1000)
             while not self.closed:

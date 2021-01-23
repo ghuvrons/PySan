@@ -11,5 +11,3 @@ class HTTPServerSan(HTTPServer, ThreadingTCPServer):
         """Finish one request by instantiating RequestHandlerClass."""
         client = self.RequestHandlerClass(request, client_address, Applications = self.applications, httpServerSan = self)
         self.clients.remove(client)
-class HTTPsServerSan(HTTPServerSan):
-    pass
