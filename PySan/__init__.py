@@ -57,6 +57,8 @@ Mode : -
         '''
         print(start_message.format(host = self.host, port = self.port))
 
+        HTTPHandler.protocol_version = 'HTTP/1.1'
+        
         self.server = HTTPServerSan(self.host, self.port, HTTPHandler)
         self.server.applications = self.applications
         self.server.serve_forever()

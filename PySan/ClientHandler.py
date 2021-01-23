@@ -105,7 +105,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 self.__ws_do__(json.dumps({
                     'request': "",
                     'data': None
-                }))
+                }), isSendRespond = False)
                 self.ws.handle()
                 return
             self.message = None
@@ -233,7 +233,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
             self.app.Log.write(e)
             self.send_response_message(500, "Server error.")
 
-    def __ws_do__(self, msg):
+    def __ws_do__(self, msg, isSendRespond = True):
         try:
             msg = json.loads(msg)
             # msg = {
@@ -256,7 +256,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
             request = str(msg["request"])
             if not 'data' in msg:
                 msg["data"] = {}
-            middleware, controller, self.data, respond = self.app.route['ws'].search(request, isGetRespond = True)
+            middleware, controller, self.data, route_respond = self.app.route['ws'].search(request, isGetRespond = True)
             if not controller:
                 raise WSError(404)
             self.message = msg["data"]
@@ -269,16 +269,16 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 response_message = controller(self)
             else:
                 response_message = controller()
-            if respond == False:
+            if not isSendRespond and route_respond == False:
                 return
-            self.ws.sendRespond(respond if respond else request, 200, response_message)
+            self.ws.sendRespond(route_respond if route_respond else request, 200, response_message)
         except WSError as e:
             errorCode = e.args[0]
-            self.ws.sendRespond(respond if respond else request, errorCode, "Not Found.")
+            self.ws.sendRespond(route_respond if route_respond else request, errorCode, "Not Found.")
         except Exception:
             e = traceback.format_exc()
             self.app.Log.write(e)
-            self.ws.sendRespond(respond if respond else request, 500, "Server error.")
+            self.ws.sendRespond(route_respond if route_respond else request, 500, "Server error.")
 
     def _404_(self):
         self.send_response_message(404, "Not Found.")
@@ -342,8 +342,6 @@ class HTTPHandler(BaseHTTPRequestHandler):
         else:
             msg = '{}'.format(msg)
             self.send_header("Content-Length", len(msg))
-        if "Connection" in self.headers:
-            self.send_header("Connection", self.headers["Connection"])
         for key in self.respone_headers.keys():
             self.send_header(key, self.respone_headers[key])
         self.end_headers()
