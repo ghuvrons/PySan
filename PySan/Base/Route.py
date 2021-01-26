@@ -31,7 +31,7 @@ class Route:
             'controller': str(obj['controller']), 
             'methods': obj['method'], 
             'middleware': obj['middleware'], 
-            "respond": str(obj['respond'])
+            "respond": obj['respond'] if not obj['respond'] else str(obj['respond'])
         }
     def jsonToRoute(self, objs):
         result = []

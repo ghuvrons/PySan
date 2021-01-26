@@ -269,7 +269,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
                 response_message = controller(self)
             else:
                 response_message = controller()
-            if not isSendRespond and route_respond == False:
+            if not isSendRespond or route_respond == False:
                 return
             self.ws.sendRespond(route_respond if route_respond else request, 200, response_message)
         except WSError as e:

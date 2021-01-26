@@ -155,10 +155,10 @@ class ClientHandler():
         # Send to the client
         self.HTTPReqHandler.connection.send(message)
 
-    def sendRespond(self, respMessage, code = 200, respData = None):
+    def sendRespond(self, respMessage, status = 200, respData = None):
         resp = {
             "respond": respMessage,
-            "code": code,
+            "status": status,
             "data": respData
         }
         self.sendMessage(json.dumps(resp))
