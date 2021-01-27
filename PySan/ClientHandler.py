@@ -17,7 +17,7 @@ def encode_complex(obj):
 
 class HTTPHandler(BaseHTTPRequestHandler):
     
-    HTTPHandler.isSSL = False
+    isSSL = False
 
     def __init__(self, client_sock, client_address, Applications = {}, httpServerSan = None):
         if Applications == {}:
