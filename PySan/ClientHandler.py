@@ -16,7 +16,7 @@ def encode_complex(obj):
     raise TypeError(repr(obj) + " is not JSON serializable.") 
 
 class HTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, client_sock, client_address, Applications = {}, httpServerSan = None):
+    def __init__(self, client_sock, client_address, Applications = {}, httpServerSan = None, isSSL = False):
         if Applications == {}:
             raise PySanError("Application module is not set yet.")
         self.Applications = Applications
@@ -30,36 +30,32 @@ class HTTPHandler(BaseHTTPRequestHandler):
         self.httpServerSan = httpServerSan
         self.httpServerSan.clients.append(self)
         self.isSetupSuccess = True
-        self.isSSL = False
+        self.isSSL = isSSL
         BaseHTTPRequestHandler.__init__(self, client_sock, client_address, self.httpServerSan.server_socket)
 
     def servername_callback(self, sock, req_hostname, cb_context, as_callback=True):
         self.hostname = req_hostname
         try:
-            app = self.Applications.get(req_hostname, self.Applications['locallhost'])
+            app = self.Applications.get(req_hostname, self.Applications['localhost'])
             sock.context = app.ssl_context
-            self.isSSL = True
         except Exception:
             g = traceback.format_exc()
             print("ssl error", g)
         
     def setup(self):
         try:
-            context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
-            context.set_servername_callback(self.servername_callback)
             if self.isSSL:
+                context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+                context.set_servername_callback(self.servername_callback)
                 context.load_cert_chain(certfile="/etc/ssl/certs/ssl-cert-snakeoil.pem",
                                         keyfile="/etc/ssl/private/ssl-cert-snakeoil.key")
-                self.client_sock = context.wrap_socket(
-                    self.client_sock, 
+                self.request = context.wrap_socket(
+                    self.request, 
                     server_side=True
                 )
         except Exception:
             g = traceback.format_exc()
             print("ssl error", g)
-            # self.client_sock.shutdown(1)
-            # self.onClose(self)
-            # self.client_sock.close()
             self.isSetupSuccess = False
         BaseHTTPRequestHandler.setup(self)
 
@@ -349,15 +345,15 @@ class HTTPHandler(BaseHTTPRequestHandler):
         if 'name' in dir(msg):
             while True:
                 s = msg.read()
-                if s: self.client_sock.send(s)
+                if s: self.connection.send(s)
                 else: break
             self.close_connection = 1
             msg.close()
         else:
             if msg is not '':
-                self.client_sock.send(msg.encode('utf-8'))
+                self.connection.send(msg.encode('utf-8'))
     def close(self):
-        self.httpServerSan.shutdown_request(self.client_sock)
+        self.httpServerSan.shutdown_request(self.connection)
         self.close_connection = 1
     def __del__(self):
         print("client remove")
