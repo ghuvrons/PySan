@@ -37,11 +37,12 @@ class SettingHandler(threading.Thread, SocketFileSVR):
         self.cmd(sock, command[0], app)
 
 class PySan:
-    def __init__(self, host = "127.0.0.1", port=3000):
+    def __init__(self, host = "127.0.0.1", port=3000, isSSL = False):
         self.applications = {}
         self.server = None
         self.host = host
         self.port = port
+        self.isSSL = isSSL
         main_module = sys.modules["__main__"]
         self.main_path = os.path.dirname(os.path.abspath(main_module.__file__))
     def start(self):
@@ -58,7 +59,7 @@ Mode : -
         print(start_message.format(host = self.host, port = self.port))
 
         HTTPHandler.protocol_version = 'HTTP/1.1'
-        
+        HTTPHandler.isSSL = self.isSSL
         self.server = HTTPServerSan(self.host, self.port, HTTPHandler)
         self.server.applications = self.applications
         self.server.serve_forever()
