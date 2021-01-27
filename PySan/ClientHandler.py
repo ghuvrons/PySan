@@ -165,7 +165,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
             except:
                 pass
             try:
-                if origin in self.app.config["Access-Control-Allow"]["Origins"]:
+                if origin in self.app.config["Access-Control-Allow"]["Origins"] or '*' in self.app.config["Access-Control-Allow"]["Origins"]:
                     self.set_respone_header('Access-Control-Allow-Origin', origin)
             except:
                 pass
@@ -201,7 +201,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
             middleware, controller, self.data = self.app.route['http'].search(self.path, method)
             origin = self.headers.get("Origin")
             try:
-                if origin in self.app.config["Access-Control-Allow"]["Origins"]:
+                if origin in self.app.config["Access-Control-Allow"]["Origins"] or '*' in self.app.config["Access-Control-Allow"]["Origins"]:
                     self.set_respone_header('Access-Control-Allow-Origin', origin)
             except:
                 pass
