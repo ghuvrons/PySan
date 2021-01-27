@@ -16,7 +16,10 @@ def encode_complex(obj):
     raise TypeError(repr(obj) + " is not JSON serializable.") 
 
 class HTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, client_sock, client_address, Applications = {}, httpServerSan = None, isSSL = False):
+    
+    HTTPHandler.isSSL = False
+
+    def __init__(self, client_sock, client_address, Applications = {}, httpServerSan = None):
         if Applications == {}:
             raise PySanError("Application module is not set yet.")
         self.Applications = Applications
@@ -30,7 +33,6 @@ class HTTPHandler(BaseHTTPRequestHandler):
         self.httpServerSan = httpServerSan
         self.httpServerSan.clients.append(self)
         self.isSetupSuccess = True
-        self.isSSL = isSSL
         BaseHTTPRequestHandler.__init__(self, client_sock, client_address, self.httpServerSan.server_socket)
 
     def servername_callback(self, sock, req_hostname, cb_context, as_callback=True):
@@ -44,7 +46,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
         
     def setup(self):
         try:
-            if self.isSSL:
+            if HTTPHandler.isSSL:
                 context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
                 context.set_servername_callback(self.servername_callback)
                 context.load_cert_chain(certfile="/etc/ssl/certs/ssl-cert-snakeoil.pem",
